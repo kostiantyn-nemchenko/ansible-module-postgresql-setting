@@ -155,6 +155,8 @@ def main():
                 except SQLParseError:
                     e = get_exception()
                     module.fail_json(msg=str(e))
+        else:
+            module.warn("Option %s does not exist" % option)
     except NotSupportedError:
         e = get_exception()
         module.fail_json(msg=str(e))
