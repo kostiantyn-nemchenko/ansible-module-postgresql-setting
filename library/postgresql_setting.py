@@ -5,6 +5,26 @@ ANSIBLE_METADATA = {'status': ['stableinterface'],
                     'supported_by': 'community',
                     'version': '1.0'}
 
+
+EXAMPLES = '''
+# Set work_mem parameter to 8MB
+- postgresql_setting:
+    option: work_mem
+    value: 8MB
+    state: present
+
+# Allow only local TCP/IP "loopback" connections to be made
+- postgresql_setting:
+    option: listen_addresses
+    state: absent
+
+# Enable autovacuum
+- postgresql_setting:
+    option: autovacuum
+    value: on
+'''
+
+
 try:
     import psycopg2
     import psycopg2.extras
