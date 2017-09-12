@@ -59,7 +59,7 @@ def option_reset(cursor, option):
 
 def option_set(cursor, option, value):
     """Set new value for parameter"""
-    if not (option_matches(cursor, option, value) and option_ispreset(cursor, option)):
+    if not option_matches(cursor, option, value):
         cursor.execute("ALTER SYSTEM SET %s TO '%s'" % (option, value))
         return True
     else:
@@ -131,7 +131,10 @@ def main():
         module.fail_json(msg="unable to connect to database: %s" % e)
 
     try:
-        if option_exists(cursor, option):
+        if option_ispreset(cursor, option):
+            module.warn("Option %s is preset, so it can only be set at initdb or before building from source code. "
+                        "For details, see https://www.postgresql.org/docs/current/static/runtime-config-preset.html" % option)
+        elif option_exists(cursor, option):
             if module.check_mode:
                 if state == "absent":
                     changed = not option_isdefault(cursor, option)
