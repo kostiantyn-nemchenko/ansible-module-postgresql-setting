@@ -11,57 +11,57 @@ DOCUMENTATION = '''
 module: postgresql_setting
 short_description: manage config settings for PostgreSQL instance.
 description:
-    - Change server configuration parameters across the entire database cluster
-    - New values will be effective after the next server configuration reload,
-      or after the next server restart in the case of parameters that can only
-      be changed at server start
-    - Only superusers can change configuration settings
+  - Change server configuration parameters across the entire database cluster
+  - New values will be effective after the next server configuration reload,
+    or after the next server restart in the case of parameters that can only
+    be changed at server start
+  - Only superusers can change configuration settings
 author: "Kostiantyn Nemchenko (@kostiantyn-nemchenko)"
 version_added: "2.3"
 requirements:
-    - psycopg2
+  - psycopg2
 options:
-    login_user:
-        description:
-            - The username used to authenticate with
-        required: false
-        default: null
-    login_password:
-        description:
-            - The password used to authenticate with
-        required: false
-        default: null
-    login_host:
-        description:
-            - Host running the database
-        required: false
-        default: localhost
-    login_unix_socket:
-        description:
-            - Path to a Unix domain socket for local connections
-        required: false
-        default: null
-    port:
-        description:
-            - Database port to connect to.
-        required: false
-        default: 5432
-    option:
-        description:
-            - The parameter from PostgreSQL configuration file
-        required: true
-        default: null
-    value:
-        description:
-            - The value of the parameter to change
-        required: false
-        default: null
-    state:
-        description:
-            - The parameter state
-        required: false
-        default: present
-        choices: [ "present", "absent" ]
+  login_user:
+    description:
+      - The username used to authenticate with
+    required: false
+    default: null
+  login_password:
+    description:
+      - The password used to authenticate with
+    required: false
+    default: null
+  login_host:
+    description:
+      - Host running the database
+    required: false
+    default: localhost
+  login_unix_socket:
+    description:
+      - Path to a Unix domain socket for local connections
+    required: false
+    default: null
+  port:
+    description:
+      - Database port to connect to.
+    required: false
+    default: 5432
+  option:
+    description:
+      - The parameter from PostgreSQL configuration file
+    required: true
+    default: null
+  value:
+    description:
+      - The value of the parameter to change
+    required: false
+    default: null
+  state:
+    description:
+      - The parameter state
+    required: false
+    default: present
+    choices: [ "present", "absent" ]
 '''
 
 
