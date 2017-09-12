@@ -27,10 +27,7 @@ def option_ispreset(cursor, option):
     https://www.postgresql.org/docs/current/static/runtime-config-preset.html
     """
     cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_settings WHERE context = 'internal' AND name = '%s')" % option)
-    if cursor.fetchone()[0]:
-        return True
-    else:
-        return False
+    return cursor.fetchone()[0]
 
 def option_get_default_value(cursor, option):
     """Get parameter value assumed at server startup"""
@@ -49,7 +46,7 @@ def option_isdefault(cursor, option):
 
 def option_exists(cursor, option):
     """Check if such parameter exists"""
-    cursor.execute("SELECT name FROM pg_settings WHERE name='%s'" % option)
+    cursor.execute("SELECT name FROM pg_settings WHERE name = '%s'" % option)
     return cursor.rowcount > 0
 
 def option_reset(cursor, option):
