@@ -9,12 +9,12 @@ ANSIBLE_METADATA = {'status': ['stableinterface'],
 DOCUMENTATION = '''
 ---
 module: postgresql_setting
-short_description: adds or removes (resets to default) settings from a PostgreSQL instance.
+short_description: manage config settings for PostgreSQL instance.
 description:
     - Change server configuration parameters across the entire database cluster
-    - New values will be effective after the next server configuration reload, 
-      or after the next server restart in the case of parameters that can only be changed 
-      at server start
+    - New values will be effective after the next server configuration reload,
+      or after the next server restart in the case of parameters that can only
+      be changed at server start
     - Only superusers can change configuration settings
 author: "Kostiantyn Nemchenko (@kostiantyn-nemchenko)"
 version_added: "2.3"
@@ -60,7 +60,7 @@ options:
         description:
             - The parameter state
         required: false
-        default: present  
+        default: present
         choices: [ "present", "absent" ]
 '''
 
@@ -93,6 +93,7 @@ else:
     postgresqldb_found = True
 from ansible.module_utils.six import iteritems
 
+
 class NotSupportedError(Exception):
     pass
 
@@ -102,20 +103,41 @@ class NotSupportedError(Exception):
 #
 
 def option_ispreset(cursor, option):
-    """Check if option is a preset parameter 
+    """Check if option is a preset parameter
     https://www.postgresql.org/docs/current/static/runtime-config-preset.html
     """
-    cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_settings WHERE context = 'internal' AND name = '%s')" % option)
+    query = """
+    SELECT EXISTS
+        (SELECT 1
+         FROM pg_settings
+         WHERE context = 'internal'
+           AND name = '%s')
+    """
+    cursor.execute(query % option)
     return cursor.fetchone()[0]
+
 
 def option_get_default_value(cursor, option):
     """Get parameter value assumed at server startup"""
-    cursor.execute("SELECT boot_val FROM pg_settings WHERE name = '%s'" % option)
+    query = """
+    SELECT boot_val
+    FROM pg_settings
+    WHERE name = '%s'
+    """
+    cursor.execute(query % option)
     return cursor.fetchone()[0]
 
+
 def option_isdefault(cursor, option):
-    """Whether the parameter has not been changed since the last database start or configuration reload"""
-    cursor.execute("SELECT boot_val, reset_val FROM pg_settings WHERE name = '%s'" % option)
+    """Whether the parameter has not been changed since the last database start or
+    configuration reload"""
+    query = """
+    SELECT boot_val,
+           reset_val
+    FROM pg_settings
+    WHERE name = '%s'
+    """
+    cursor.execute(query % option)
     rows = cursor.fetchone()
     if cursor.rowcount > 0:
         default_value, current_value = rows[0], rows[1]
@@ -123,35 +145,50 @@ def option_isdefault(cursor, option):
     else:
         return False
 
+
 def option_exists(cursor, option):
     """Check if such parameter exists"""
-    cursor.execute("SELECT name FROM pg_settings WHERE name = '%s'" % option)
+    query = """
+    SELECT name
+    FROM pg_settings
+    WHERE name = '%s'
+    """
+    cursor.execute(query % option)
     return cursor.rowcount > 0
+
 
 def option_reset(cursor, option):
     """Reset parameter if it has non-default value"""
     if not option_isdefault(cursor, option):
-        cursor.execute("ALTER SYSTEM SET %s TO %s" % (option, option_get_default_value(cursor, option)))
+        query = "ALTER SYSTEM SET %s TO '%s'"
+        cursor.execute(query % (option,
+                                option_get_default_value(cursor, option)))
         return True
     else:
         return False
+
 
 def option_set(cursor, option, value):
     """Set new value for parameter"""
     if not option_matches(cursor, option, value):
-        cursor.execute("ALTER SYSTEM SET %s TO '%s'" % (option, value))
+        query = "ALTER SYSTEM SET %s TO '%s'"
+        cursor.execute(query % (option, value))
         return True
     else:
         return False
 
+
 def option_matches(cursor, option, value):
     """Check if setting matches the specified value"""
-    cursor.execute("SELECT current_setting('%s') = '%s'" % (option, value))
+    query = "SELECT current_setting('%s') = '%s'"
+    cursor.execute(query % (option, value))
     return cursor.fetchone()[0]
+
 
 # ===========================================
 # Module execution.
 #
+
 
 def main():
     module = AnsibleModule(
@@ -161,11 +198,12 @@ def main():
             login_host=dict(default=""),
             login_unix_socket=dict(default=""),
             port=dict(default="5432"),
-            option=dict(required=True, aliases=['name', 'setting', 'guc', 'parameter']),
+            option=dict(required=True,
+                        aliases=['name', 'setting', 'guc', 'parameter']),
             value=dict(default=""),
             state=dict(default="present", choices=["absent", "present"]),
         ),
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     if not postgresqldb_found:
@@ -181,16 +219,20 @@ def main():
     # check which values are empty and don't include in the **kw
     # dictionary
     params_map = {
-        "login_host":"host",
-        "login_user":"user",
-        "login_password":"password",
-        "port":"port"
+        "login_host": "host",
+        "login_user": "user",
+        "login_password": "password",
+        "port": "port"
     }
-    kw = dict( (params_map[k], v) for (k, v) in iteritems(module.params)
-              if k in params_map and v != '' )
+    kw = dict((params_map[k], v) for (k, v) in iteritems(module.params)
+              if k in params_map and v != '')
 
     # If a login_unix_socket is specified, incorporate it here.
-    is_localhost = "host" not in kw or kw["host"] == "" or kw["host"] == "localhost"
+    if "host" not in kw or kw["host"] == "" or kw["host"] == "localhost":
+        is_localhost = True
+    else:
+        is_localhost = False
+
     if is_localhost and module.params["login_unix_socket"] != "":
         kw["host"] = module.params["login_unix_socket"]
 
@@ -204,15 +246,19 @@ def main():
                                               .extensions
                                               .ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = db_connection.cursor(
-                cursor_factory=psycopg2.extras.DictCursor)
+            cursor_factory=psycopg2.extras.DictCursor)
     except Exception:
         e = get_exception()
         module.fail_json(msg="unable to connect to database: %s" % e)
 
     try:
         if option_ispreset(cursor, option):
-            module.warn("Option %s is preset, so it can only be set at initdb or before building from source code. "
-                        "For details, see https://www.postgresql.org/docs/current/static/runtime-config-preset.html" % option)
+            module.warn(
+                "Option %s is preset, so it can only be set at initdb "
+                "or before building from source code. For details, see "
+                "postgresql.org/docs/current/static/runtime-config-preset.html"
+                % option
+            )
         elif option_exists(cursor, option):
             if module.check_mode:
                 if state == "absent":
@@ -240,7 +286,7 @@ def main():
         e = get_exception()
         module.fail_json(msg=str(e))
     except SystemExit:
-        # Avoid catching this on Python 2.4 
+        # Avoid catching this on Python 2.4
         raise
     except Exception:
         e = get_exception()
