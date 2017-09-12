@@ -134,7 +134,7 @@ def main():
         if option_exists(cursor, option):
             if module.check_mode:
                 if state == "absent":
-                    changed = option_isdefault(cursor, option)
+                    changed = not option_isdefault(cursor, option)
                 elif state == "present":
                     changed = not option_matches(cursor, option, value)
                 module.exit_json(changed=changed, option=option)
